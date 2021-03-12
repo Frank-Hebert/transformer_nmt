@@ -1,0 +1,6 @@
+runs
+.vscode
+.data
+__pycache__
+Pipfile
+my_checkpoint.pth.tar
