@@ -6,7 +6,7 @@ import sys
 
 def translate_sentence(model, sentence, german, english, device, max_length=50):
     # Load german tokenizer
-    spacy_ger = spacy.load("de_core_news_sm")
+    spacy_ger = spacy.load("lt_core_news_sm")
 
     # Create tokens using spacy and everything in lower case (which is what our vocab is)
     if type(sentence) == str:

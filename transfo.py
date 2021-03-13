@@ -18,67 +18,120 @@ python -m spacy download fr
 python -m spacy download lt
 """
 
+spacy_eng = spacy.load("en_core_web_sm")
+spacy_fr = spacy.load("fr_core_news_sm")
+spacy_lit = spacy.load("lt_core_news_sm")
+
 # Reading data with pandas
 fr_en = pd.read_csv('./data/fra.txt', delimiter='\t', header=None).iloc[:,:2].to_numpy(dtype=None, copy=False)
 lt_en = pd.read_csv('./data/lit.txt', delimiter='\t', header=None).iloc[:,:2].to_numpy(dtype=None, copy=False)
 
-# Splitting data
+#Save to txt
+np.savetxt('english.txt', lt_en[:,0],fmt='%s')
+# np.savetxt('lithuanian.txt', lt_en[:,1],fmt='%s')
+
+#Read txt files
+# ISO 8859-4 
+english_txt = open('english.txt', encoding='utf-8').read().split('\n')
+lithuanian_txt = open('lithuanian.txt', encoding='utf-8').read().split('\n')
+
+#Create dataframe
+raw_data = {'English': [line for line in english_txt],
+            'Lithuanian': [line for line in lithuanian_txt]}
+
+df = pd.DataFrame(raw_data, columns=['English', 'Lithuanian'])
+
+#Split the data
 test_size = 0.05
 valid_size = 0.15 / (1-test_size) 
 
-fr_en_train_temp, fr_en_test = train_test_split(fr_en, test_size=test_size)
-fr_en_train, fr_en_valid = train_test_split(fr_en_train_temp, test_size=valid_size)
+train_temp, test = train_test_split(df, test_size=test_size)
+train, valid = train_test_split(train_temp, test_size=valid_size)
 
-lt_en_train_temp, lt_en_test = train_test_split(lt_en, test_size=test_size)
-lt_en_train, lt_en_valid = train_test_split(lt_en_train_temp, test_size=valid_size)
-# fr_en_train_temp = iter(fr_en_train_temp)
-# train_data, valid_data, test_data = Multi30k.splits(
-#     exts=(".de", ".en"), fields=(german, english)
-# )
+#Save to .json files
+train.to_json('train.json', orient='records', lines=True)
+test.to_json('test.json', orient='records', lines=True)
+valid.to_json('valid.json', orient='records', lines=True)
+# to save into csv files
+# train.to_csv('train.csv', index=False)
+# test.to_csv('test.csv', index=False)
 
-# initialize tokenizer
-spacy_eng = spacy.load("en_core_web_sm")
-spacy_fr = spacy.load("fr_core_news_sm")
-spacy_lt = spacy.load("lt_core_news_sm")
-
-def tokenize_lt(text):
-    return [tok.text for tok in spacy_lt.tokenizer(text)]
-
+#Create tokenize function
 def tokenize_eng(text):
-    return [tok.text for tok in spacy_eng.tokenizer(text)]
+  return [tok.text for tok in spacy_eng.tokenizer(text)]
 
-# np.savetxt("lit2_txt", lt_en_train, fmt='%s', delimiter='\t', newline='\n', header='', footer='', comments='# ', encoding=None)
+def tokenize_lit(text):
+  return [tok.text for tok in spacy_lit.tokenizer(text)]
 
-# lit_en = TabularDataset(
-#     path='.\data\lit.txt', format='txt',
-#     fields={'lutuanian': ('lt', Field(sequential=True)),
-#              'english': ('en', Field(sequential=True))})
+#Create Fields
+english = Field(sequential=True, use_vocab=True, tokenize=tokenize_eng, lower=True)
+lithuanian = Field(sequential=True, use_vocab=True, tokenize=tokenize_lit, lower=True)
 
-luthuanian = Field(tokenize=tokenize_lt, lower=True, init_token="<sos>", eos_token="<eos>")
-english = Field(tokenize=tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>")
+# fields = {'English': ('eng', english), 'Lithuanian' : ('lit', lithuanian)}
+# fields = {'English': ('trg', english), 'Lithuanian' : ('src', lithuanian)}
+fields = {'Lithuanian' : ('src', lithuanian), 'English': ('trg', english)}
 
-vocab_luth_train = lt_en_train[:, 1].tolist()
-vocab_eng_train = lt_en_train[:, 0].tolist()
+#Tabular Dataset
+train_data, valid_data, test_data = TabularDataset.splits(
+    path='',
+    train='train.json',
+    validation='valid.json',
+    test='test.json',
+    format='json',
+    fields=fields)
 
-# building vocabularies
-luthuanian.build_vocab(vocab_luth_train, max_size=10000, min_freq=2)
-print(len(luthuanian.vocab))
-english.build_vocab(vocab_eng_train, max_size=10000, min_freq=2)
-print(len(english.vocab))
+#Create Vocab
+english.build_vocab(train_data, max_size=10000, min_freq=2)
+lithuanian.build_vocab(train_data, max_size=10000, min_freq=2)
 
-sys.exit()
-# pos = data.TabularDataset(
-# path='\data\lit.txt', format='txt',
-# fields=[('lt', data.Field()),
-#         ('en', data.Field())])
+# # Splitting data
+# test_size = 0.05
+# valid_size = 0.15 / (1-test_size) 
 
-# lit_en = data.TabularDataset()
+# fr_en_train_temp, fr_en_test = train_test_split(fr_en, test_size=test_size)
+# fr_en_train, fr_en_valid = train_test_split(fr_en_train_temp, test_size=valid_size)
 
-# train_data, valid_data, test_data = lit_en.splits(
-#     exts=(".lt", ".en"), fields=(german, english)
-# )
+# lt_en_train_temp, lt_en_test = train_test_split(lt_en, test_size=test_size)
+# lt_en_train, lt_en_valid = train_test_split(lt_en_train_temp, test_size=valid_size)
+# # fr_en_train_temp = iter(fr_en_train_temp)
+# # train_data, valid_data, test_data = Multi30k.splits(
+# #     exts=(".de", ".en"), fields=(german, english)
+# # )
 
-# torchtext.data.Dataset()
+# # initialize tokenizer
+# spacy_eng = spacy.load("en_core_web_sm")
+# spacy_fr = spacy.load("fr_core_news_sm")
+# spacy_lt = spacy.load("lt_core_news_sm")
+
+# def tokenize_lt(text):
+#     return [tok.text for tok in spacy_lt.tokenizer(text)]
+
+# def tokenize_eng(text):
+#     return [tok.text for tok in spacy_eng.tokenizer(text)]
+
+# # np.savetxt("lit2_txt", lt_en_train, fmt='%s', delimiter='\t', newline='\n', header='', footer='', comments='# ', encoding=None)
+
+# # lit_en = TabularDataset(
+# #     path='.\data\lit.txt', format='txt',
+# #     fields={'lutuanian': ('lt', Field(sequential=True)),
+# #              'english': ('en', Field(sequential=True))})
+
+# luthuanian = Field(tokenize=tokenize_lt, lower=True, init_token="<sos>", eos_token="<eos>")
+# english = Field(tokenize=tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>")
+
+# # FIELDS = [('text', TEXT), ('category', LABEL)]
+# LABEL = Field(sequential=False, use_vocab=False)
+
+# vocab_luth_train = Dataset(lt_en_train[:, 1].tolist(), fields=[('text', luthuanian), ('category', LABEL)])
+# vocab_eng_train = Dataset(lt_en_train[:, 0].tolist(), fields=[('text', english), ('category', LABEL)])
+
+# # building vocabularies
+# luthuanian.build_vocab(vocab_luth_train, max_size=10000, min_freq=2)
+# print(len(luthuanian.vocab))
+# english.build_vocab(vocab_eng_train, max_size=10000, min_freq=2)
+# print(len(english.vocab))
+
+# sys.exit()
 
 # Create transformer class
 class Transformer(nn.Module):
@@ -173,8 +226,8 @@ learning_rate = 3e-4
 batch_size = 32
 
 # Model hyperparameters
-src_vocab_size = len(german.vocab)
 trg_vocab_size = len(english.vocab)
+src_vocab_size = len(lithuanian.vocab)
 embedding_size = 512
 num_heads = 8
 num_encoder_layers = 3
@@ -187,6 +240,12 @@ src_pad_idx = english.vocab.stoi["<pad>"]
 # Tensorboard to get nice loss plot
 writer = SummaryWriter("runs/loss_plot")
 step = 0
+
+# train_iterator, test_iterator = BucketIterator.splits(
+#     (train_data, test_data),
+#     batch_size=32,
+#     device=device)
+
 
 train_iterator, valid_iterator, test_iterator = BucketIterator.splits(
     (train_data, valid_data, test_data),
@@ -222,7 +281,7 @@ criterion = nn.CrossEntropyLoss(ignore_index=pad_idx)
 if load_model:
     load_checkpoint(torch.load("my_checkpoint.pth.tar"), model, optimizer)
 
-sentence = "ein pferd geht unter einer brücke neben einem boot."
+sentence = "Gyvenimas yra gražus."
 
 for epoch in range(num_epochs):
     print(f"[Epoch {epoch} / {num_epochs}]")
@@ -236,7 +295,7 @@ for epoch in range(num_epochs):
 
     model.eval()
     translated_sentence = translate_sentence(
-        model, sentence, german, english, device, max_length=50
+        model, sentence, lithuanian, english, device, max_length=50
     )
 
     print(f"Translated example sentence: \n {translated_sentence}")
@@ -282,5 +341,5 @@ for epoch in range(num_epochs):
     scheduler.step(mean_loss)
 
 # running on entire test data takes a while
-score = bleu(test_data[1:100], model, german, english, device)
+score = bleu(test_data[1:100], model, lithuanian, english, device)
 print(f"Bleu score {score * 100:.2f}")
