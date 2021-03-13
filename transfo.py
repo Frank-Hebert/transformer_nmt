@@ -1,54 +1,86 @@
-"""
-Seq2Seq using Transformers on the Multi30k
-dataset. In this video I utilize Pytorch
-inbuilt Transformer modules, and have a
-separate implementation for Transformers
-from scratch. Training this model for a
-while (not too long) gives a BLEU score
-of ~35, and I think training for longer
-would give even better results.
-"""
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import spacy
+import pandas as pd
 from utils import translate_sentence, bleu, save_checkpoint, load_checkpoint
 from torch.utils.tensorboard import SummaryWriter
 from torchtext.datasets import Multi30k
-from torchtext.data import Field, BucketIterator
+from torchtext.data import Dataset, Field, BucketIterator, TabularDataset
+from sklearn.model_selection import train_test_split
+import numpy as np
+import sys
 
 """
 To install spacy languages do:
 python -m spacy download en
-python -m spacy download de
+python -m spacy download fr
+python -m spacy download lt
 """
-spacy_ger = spacy.load("de_core_news_sm")
+
+# Reading data with pandas
+fr_en = pd.read_csv('./data/fra.txt', delimiter='\t', header=None).iloc[:,:2].to_numpy(dtype=None, copy=False)
+lt_en = pd.read_csv('./data/lit.txt', delimiter='\t', header=None).iloc[:,:2].to_numpy(dtype=None, copy=False)
+
+# Splitting data
+test_size = 0.05
+valid_size = 0.15 / (1-test_size) 
+
+fr_en_train_temp, fr_en_test = train_test_split(fr_en, test_size=test_size)
+fr_en_train, fr_en_valid = train_test_split(fr_en_train_temp, test_size=valid_size)
+
+lt_en_train_temp, lt_en_test = train_test_split(lt_en, test_size=test_size)
+lt_en_train, lt_en_valid = train_test_split(lt_en_train_temp, test_size=valid_size)
+# fr_en_train_temp = iter(fr_en_train_temp)
+# train_data, valid_data, test_data = Multi30k.splits(
+#     exts=(".de", ".en"), fields=(german, english)
+# )
+
+# initialize tokenizer
 spacy_eng = spacy.load("en_core_web_sm")
+spacy_fr = spacy.load("fr_core_news_sm")
+spacy_lt = spacy.load("lt_core_news_sm")
 
-
-def tokenize_ger(text):
-    return [tok.text for tok in spacy_ger.tokenizer(text)]
-
+def tokenize_lt(text):
+    return [tok.text for tok in spacy_lt.tokenizer(text)]
 
 def tokenize_eng(text):
     return [tok.text for tok in spacy_eng.tokenizer(text)]
 
+# np.savetxt("lit2_txt", lt_en_train, fmt='%s', delimiter='\t', newline='\n', header='', footer='', comments='# ', encoding=None)
 
-german = Field(tokenize=tokenize_ger, lower=True, init_token="<sos>", eos_token="<eos>")
+# lit_en = TabularDataset(
+#     path='.\data\lit.txt', format='txt',
+#     fields={'lutuanian': ('lt', Field(sequential=True)),
+#              'english': ('en', Field(sequential=True))})
 
-english = Field(
-    tokenize=tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>"
-)
+luthuanian = Field(tokenize=tokenize_lt, lower=True, init_token="<sos>", eos_token="<eos>")
+english = Field(tokenize=tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>")
 
-train_data, valid_data, test_data = Multi30k.splits(
-    exts=(".de", ".en"), fields=(german, english)
-)
+vocab_luth_train = lt_en_train[:, 1].tolist()
+vocab_eng_train = lt_en_train[:, 0].tolist()
 
-german.build_vocab(train_data, max_size=10000, min_freq=2)
-english.build_vocab(train_data, max_size=10000, min_freq=2)
+# building vocabularies
+luthuanian.build_vocab(vocab_luth_train, max_size=10000, min_freq=2)
+print(len(luthuanian.vocab))
+english.build_vocab(vocab_eng_train, max_size=10000, min_freq=2)
+print(len(english.vocab))
 
+sys.exit()
+# pos = data.TabularDataset(
+# path='\data\lit.txt', format='txt',
+# fields=[('lt', data.Field()),
+#         ('en', data.Field())])
 
+# lit_en = data.TabularDataset()
+
+# train_data, valid_data, test_data = lit_en.splits(
+#     exts=(".lt", ".en"), fields=(german, english)
+# )
+
+# torchtext.data.Dataset()
+
+# Create transformer class
 class Transformer(nn.Module):
     def __init__(
         self,
