@@ -11,27 +11,11 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import sys
 
-"""
-To install spacy languages do:
-python -m spacy download en
-python -m spacy download fr
-python -m spacy download lt
-"""
 
 spacy_eng = spacy.load("en_core_web_sm")
-spacy_fr = spacy.load("fr_core_news_sm")
+# spacy_fr = spacy.load("fr_core_news_sm")
 spacy_lit = spacy.load("lt_core_news_sm")
 
-# Reading data with pandas
-fr_en = pd.read_csv('./data/fra.txt', delimiter='\t', header=None).iloc[:,:2].to_numpy(dtype=None, copy=False)
-lt_en = pd.read_csv('./data/lit.txt', delimiter='\t', header=None).iloc[:,:2].to_numpy(dtype=None, copy=False)
-
-#Save to txt
-np.savetxt('english.txt', lt_en[:,0],fmt='%s')
-# np.savetxt('lithuanian.txt', lt_en[:,1],fmt='%s')
-
-#Read txt files
-# ISO 8859-4 
 english_txt = open('english.txt', encoding='utf-8').read().split('\n')
 lithuanian_txt = open('lithuanian.txt', encoding='utf-8').read().split('\n')
 
@@ -52,11 +36,8 @@ train, valid = train_test_split(train_temp, test_size=valid_size)
 train.to_json('train.json', orient='records', lines=True)
 test.to_json('test.json', orient='records', lines=True)
 valid.to_json('valid.json', orient='records', lines=True)
-# to save into csv files
-# train.to_csv('train.csv', index=False)
-# test.to_csv('test.csv', index=False)
 
-#Create tokenize function
+#Tokenizers
 def tokenize_eng(text):
   return [tok.text for tok in spacy_eng.tokenizer(text)]
 
@@ -67,13 +48,8 @@ def tokenize_lit(text):
 english = Field(sequential=True, use_vocab=True, tokenize=tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>")
 lithuanian = Field(sequential=True, use_vocab=True, tokenize=tokenize_lit, lower=True, init_token="<sos>", eos_token="<eos>")
 
-# fields = {'English': ('eng', english), 'Lithuanian' : ('lit', lithuanian)}
-# fields = {'English': ('trg', english), 'Lithuanian' : ('src', lithuanian)}
+
 fields = {'Lithuanian' : ('src', lithuanian), 'English': ('trg', english)}
-
-
-#a checker!
-
 
 #Tabular Dataset
 train_data, valid_data, test_data = TabularDataset.splits(
@@ -84,60 +60,11 @@ train_data, valid_data, test_data = TabularDataset.splits(
     format='json',
     fields=fields)
 
+
 #Create Vocab
 english.build_vocab(train_data, max_size=10000, min_freq=2)
 lithuanian.build_vocab(train_data, max_size=10000, min_freq=2)
 
-# # Splitting data
-# test_size = 0.05
-# valid_size = 0.15 / (1-test_size) 
-
-# fr_en_train_temp, fr_en_test = train_test_split(fr_en, test_size=test_size)
-# fr_en_train, fr_en_valid = train_test_split(fr_en_train_temp, test_size=valid_size)
-
-# lt_en_train_temp, lt_en_test = train_test_split(lt_en, test_size=test_size)
-# lt_en_train, lt_en_valid = train_test_split(lt_en_train_temp, test_size=valid_size)
-# # fr_en_train_temp = iter(fr_en_train_temp)
-# # train_data, valid_data, test_data = Multi30k.splits(
-# #     exts=(".de", ".en"), fields=(german, english)
-# # )
-
-# # initialize tokenizer
-# spacy_eng = spacy.load("en_core_web_sm")
-# spacy_fr = spacy.load("fr_core_news_sm")
-# spacy_lt = spacy.load("lt_core_news_sm")
-
-# def tokenize_lt(text):
-#     return [tok.text for tok in spacy_lt.tokenizer(text)]
-
-# def tokenize_eng(text):
-#     return [tok.text for tok in spacy_eng.tokenizer(text)]
-
-# # np.savetxt("lit2_txt", lt_en_train, fmt='%s', delimiter='\t', newline='\n', header='', footer='', comments='# ', encoding=None)
-
-# # lit_en = TabularDataset(
-# #     path='.\data\lit.txt', format='txt',
-# #     fields={'lutuanian': ('lt', Field(sequential=True)),
-# #              'english': ('en', Field(sequential=True))})
-
-# luthuanian = Field(tokenize=tokenize_lt, lower=True, init_token="<sos>", eos_token="<eos>")
-# english = Field(tokenize=tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>")
-
-# # FIELDS = [('text', TEXT), ('category', LABEL)]
-# LABEL = Field(sequential=False, use_vocab=False)
-
-# vocab_luth_train = Dataset(lt_en_train[:, 1].tolist(), fields=[('text', luthuanian), ('category', LABEL)])
-# vocab_eng_train = Dataset(lt_en_train[:, 0].tolist(), fields=[('text', english), ('category', LABEL)])
-
-# # building vocabularies
-# luthuanian.build_vocab(vocab_luth_train, max_size=10000, min_freq=2)
-# print(len(luthuanian.vocab))
-# english.build_vocab(vocab_eng_train, max_size=10000, min_freq=2)
-# print(len(english.vocab))
-
-# sys.exit()
-
-# Create transformer class
 class Transformer(nn.Module):
     def __init__(
         self,
@@ -217,7 +144,6 @@ class Transformer(nn.Module):
         out = self.fc_out(out)
         return out
 
-
 # We're ready to define everything we need for training our Seq2Seq model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -225,14 +151,14 @@ load_model = False
 save_model = True
 
 # Training hyperparameters
-num_epochs = 10000
+num_epochs = 3
 learning_rate = 3e-4
 batch_size = 32
 
 # Model hyperparameters
-trg_vocab_size = len(english.vocab)
 src_vocab_size = len(lithuanian.vocab)
-embedding_size = 512
+trg_vocab_size = len(english.vocab)
+embedding_size = 256
 num_heads = 8
 num_encoder_layers = 3
 num_decoder_layers = 3
@@ -244,12 +170,6 @@ src_pad_idx = english.vocab.stoi["<pad>"]
 # Tensorboard to get nice loss plot
 writer = SummaryWriter("runs/loss_plot")
 step = 0
-
-# train_iterator, test_iterator = BucketIterator.splits(
-#     (train_data, test_data),
-#     batch_size=32,
-#     device=device)
-
 
 train_iterator, valid_iterator, test_iterator = BucketIterator.splits(
     (train_data, valid_data, test_data),
@@ -282,10 +202,12 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 pad_idx = english.vocab.stoi["<pad>"]
 criterion = nn.CrossEntropyLoss(ignore_index=pad_idx)
 
+
 if load_model:
     load_checkpoint(torch.load("my_checkpoint.pth.tar"), model, optimizer)
 
-sentence = "Gyvenimas yra gražus."
+sentence = "Mano vardas Yassine."
+
 
 for epoch in range(num_epochs):
     print(f"[Epoch {epoch} / {num_epochs}]")
