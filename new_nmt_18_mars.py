@@ -10,6 +10,34 @@ from torchtext.data import Dataset, Field, BucketIterator, TabularDataset
 from sklearn.model_selection import train_test_split
 import numpy as np
 import sys
+from tokenizers import Tokenizer
+from tokenizers import CharBPETokenizer
+# from tokenizers.models import BPE
+# from tokenizers.pre_tokenizers import Whitespace
+# from tokenizers.trainers import BpeTrainer
+
+# tokenizer = Tokenizer(BPE())
+# tokenizer.pre_tokenizer = Whitespace()
+
+# trainer = BpeTrainer(special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"])
+# tokenizer.train(files=["wiki.train.raw", "wiki.valid.raw", "wiki.test.raw"], trainer=trainer)
+# output = tokenizer.encode("Hello, y'all! How are you 😁 ?")
+# print(output.tokens)
+
+eng_tokenizer = CharBPETokenizer()
+
+# Then train it!
+eng_tokenizer.train([ "english.txt" ])
+
+encoded = eng_tokenizer.encode("I can feel the magic, can you?")
+print(encoded.tokens)
+lt_tokenizer = CharBPETokenizer()
+
+# Then train it!
+lt_tokenizer.train([ "lithuanian.txt" ])
+print(lt_tokenizer)
+
+# sys.exit(0)
 
 
 spacy_eng = spacy.load("en_core_web_sm")
@@ -39,10 +67,13 @@ valid.to_json('valid.json', orient='records', lines=True)
 
 #Tokenizers
 def tokenize_eng(text):
-  return [tok.text for tok in spacy_eng.tokenizer(text)]
+    # return [tok.text for tok in spacy_eng.tokenizer(text)]
+    return [tok for tok in eng_tokenizer.encode(text).tokens]
 
 def tokenize_lit(text):
-  return [tok.text for tok in spacy_lit.tokenizer(text)]
+#   return [tok.text for tok in spacy_lit.tokenizer(text)]
+    return [tok for tok in lt_tokenizer.encode(text).tokens]
+
 
 #Create Fields
 english = Field(sequential=True, use_vocab=True, tokenize=tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>")
@@ -151,7 +182,7 @@ load_model = False
 save_model = True
 
 # Training hyperparameters
-num_epochs = 3
+num_epochs = 20
 learning_rate = 3e-4
 batch_size = 32
 
@@ -267,5 +298,5 @@ for epoch in range(num_epochs):
     scheduler.step(mean_loss)
 
 # running on entire test data takes a while
-score = bleu(test_data[1:100], model, lithuanian, english, device)
-print(f"Bleu score {score * 100:.2f}")
+# score = bleu(test_data[1:100], model, lithuanian, english, device)
+# print(f"Bleu score {score * 100:.2f}")
