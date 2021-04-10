@@ -182,7 +182,7 @@ load_model = False
 save_model = True
 
 # Training hyperparameters
-num_epochs = 3
+num_epochs = 20
 learning_rate = 3e-4
 batch_size = 32
 
@@ -298,5 +298,5 @@ for epoch in range(num_epochs):
     scheduler.step(mean_loss)
 
 # running on entire test data takes a while
-score = bleu(test_data[1:100], model, lithuanian, english, device)
-print(f"Bleu score {score * 100:.2f}")
+# score = bleu(test_data[1:100], model, lithuanian, english, device)
+# print(f"Bleu score {score * 100:.2f}")
