@@ -1,0 +1,137 @@
+[00:00:00] Pre-processing files (0 Mo)              ░░░░░░░░                  0%
+[00:00:00] Pre-processing files (0 Mo)              ████████                100%
+[00:00:00] Tokenize words                           ████████ 0        /        0
+[00:00:00] Tokenize words                           ████████ 1938     /     1938
+
+[00:00:00] Count pairs                              ████████ 1938     /     1938
+
+[00:00:00] Compute merges                           ████████ 2040     /     2040
+
+[00:00:00] Pre-processing files (0 Mo)              ░░░░░░░░                  0%
+[00:00:00] Pre-processing files (0 Mo)              ████████                100%
+[00:00:00] Tokenize words                           ████████ 0        /        0
+[00:00:00] Tokenize words                           ████████ 3343     /     3343
+
+[00:00:00] Count pairs                              ████████ 3343     /     3343
+
+[00:00:00] Compute merges                           ░░░░░░░░ 2700     /    30000
+[00:00:00] Compute merges                           ████████ 2866     /     2866
+
+1783
+2021-04-10 17:21:58.072397: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library libcudart.so.11.0
+[Epoch 0 / 100]
+Translated example sentence: 
+ ['full</w>', 'pre', 'pro', 'pro', 'pre', 'full</w>', 'button</w>', 'button</w>', 'reading</w>', 'pro', 'full</w>', 'dia', 'staying</w>', 'reading</w>', 'pro', 'pre', 'dia', 'reading</w>', 'pro', 'pro', 'pro', 'pre', 'coming</w>', 'lion</w>', 'reading</w>', 'full</w>', 'pro', 'pro', 'pro', 'pro', 'pro', 'pro', 'button</w>', 'sun</w>', 'introduce</w>', 'sun</w>', 'pro', 'dia', 'les</w>', 'ic', 'address</w>', 'pro', 'pro', 'pro', 'how</w>', 'dia', 'sun</w>', 'dia', 'dia', 'sun</w>']
+train loss =  5.418604850769043
+valid loss =  4.460492213567098
+inf
+=> Saving checkpoint
+[Epoch 1 / 100]
+Translated example sentence: 
+ ['i</w>', "'</w>", "'</w>", '<unk>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  4.464339102639093
+valid loss =  4.142542468176948
+4.460492213567098
+=> Saving checkpoint
+[Epoch 2 / 100]
+Translated example sentence: 
+ ['i</w>', "'</w>", 't</w>', 'a</w>', '<unk>', '.</w>', '<eos>']
+train loss =  4.139279026455349
+valid loss =  3.9372316466437445
+4.142542468176948
+=> Saving checkpoint
+[Epoch 3 / 100]
+Translated example sentence: 
+ ['i</w>', "'</w>", 's</w>', 'a</w>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  3.8694223986731635
+valid loss =  3.833834171295166
+3.9372316466437445
+=> Saving checkpoint
+[Epoch 4 / 100]
+Translated example sentence: 
+ ['i</w>', "'</w>", 't</w>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  3.644114229414198
+valid loss =  3.764912658267551
+3.833834171295166
+=> Saving checkpoint
+[Epoch 5 / 100]
+Translated example sentence: 
+ ['i</w>', "'</w>", 't</w>', '<unk>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  3.4419683456420898
+valid loss =  3.621524943245782
+3.764912658267551
+=> Saving checkpoint
+[Epoch 6 / 100]
+Translated example sentence: 
+ ['i</w>', 'have</w>', 'a</w>', '<unk>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  3.2337982654571533
+valid loss =  3.5739392969343395
+3.621524943245782
+=> Saving checkpoint
+[Epoch 7 / 100]
+Translated example sentence: 
+ ['i</w>', "'</w>", 're</w>', 'not</w>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  3.0464285612106323
+valid loss =  3.5145728323194714
+3.5739392969343395
+=> Saving checkpoint
+[Epoch 8 / 100]
+Translated example sentence: 
+ ['i</w>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  2.8730689075258042
+valid loss =  3.5092696613735623
+3.5145728323194714
+=> Saving checkpoint
+[Epoch 9 / 100]
+Translated example sentence: 
+ ['i</w>', "'</w>", 've</w>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  2.7236792935265437
+valid loss =  3.4944901201460095
+3.5092696613735623
+=> Saving checkpoint
+[Epoch 10 / 100]
+Translated example sentence: 
+ ['i</w>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  2.567074171702067
+valid loss =  3.5097027354770236
+3.4944901201460095
+[Epoch 11 / 100]
+Translated example sentence: 
+ ['i</w>', 'was</w>', 'very</w>', '<unk>', '<unk>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  2.416341627968682
+valid loss =  3.5520377159118652
+3.5097027354770236
+[Epoch 12 / 100]
+Translated example sentence: 
+ ['the</w>', '<unk>', 'is</w>', 'worth</w>', '<unk>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  2.2773107793596057
+valid loss =  3.4384163485633
+3.5520377159118652
+=> Saving checkpoint
+[Epoch 13 / 100]
+Translated example sentence: 
+ ['i</w>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  2.141842680507236
+valid loss =  3.5036721229553223
+3.4384163485633
+[Epoch 14 / 100]
+Translated example sentence: 
+ ['i</w>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  2.004814742671119
+valid loss =  3.5228748586442737
+3.5036721229553223
+[Epoch 15 / 100]
+Translated example sentence: 
+ ['i</w>', '<unk>', 'very</w>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  1.8711184130774603
+valid loss =  3.5636932055155435
+3.5228748586442737
+[Epoch 16 / 100]
+Translated example sentence: 
+ ['i</w>', '<unk>', 'very</w>', 'lo', '<unk>', '<unk>', '<unk>', '.</w>', '<eos>']
+train loss =  1.7463576608233982
+valid loss =  3.5686805513170032
+3.5636932055155435
+overfitting
+=> Loading checkpoint
+Bleu score 15.64
