@@ -3,15 +3,79 @@ import torch.nn as nn
 import torch.optim as optim
 import spacy
 import pandas as pd
-from utils import translate_sentence, bleu, save_checkpoint, load_checkpoint
 from torch.utils.tensorboard import SummaryWriter
 from torchtext.data import Dataset, Field, BucketIterator, TabularDataset
+from torchtext.data.metrics import bleu_score
 from sklearn.model_selection import train_test_split
 import numpy as np
 import sys
 from tokenizers import Tokenizer
 from tokenizers import CharBPETokenizer
 #from pytorchtools import EarlyStopping
+
+def translate_sentence(model, sentence, german, english, device, max_length=50):
+    # Create tokens using spacy and everything in lower case (which is what our vocab is)
+    # tokens = [tok for tok in lt_tokenizer.encode(sentence).tokens]
+    
+    if type(sentence) == str:
+        tokens = [tok for tok in lt_tokenizer.encode(sentence).tokens]
+    else:
+        tokens = [tok for tok in sentence]
+
+    # Add <SOS> and <EOS> in beginning and end respectively
+    tokens.insert(0, german.init_token)
+    tokens.append(german.eos_token)
+
+    # Go through each german token and convert to an index
+    text_to_indices = [german.vocab.stoi[token] for token in tokens]
+
+    # Convert to Tensor
+    sentence_tensor = torch.LongTensor(text_to_indices).unsqueeze(1).to(device)
+
+    outputs = [english.vocab.stoi["<sos>"]]
+    for i in range(max_length):
+        trg_tensor = torch.LongTensor(outputs).unsqueeze(1).to(device)
+
+        with torch.no_grad():
+            output = model(sentence_tensor, trg_tensor)
+
+        best_guess = output.argmax(2)[-1, :].item()
+        outputs.append(best_guess)
+
+        if best_guess == english.vocab.stoi["<eos>"]:
+            break
+
+    translated_sentence = [english.vocab.itos[idx] for idx in outputs]
+    # remove start token
+    return translated_sentence[1:]
+
+def bleu(data, model, german, english, device):
+    targets = []
+    outputs = []
+
+    for example in data:
+        src = vars(example)["src"]
+        trg = vars(example)["trg"]
+
+        prediction = translate_sentence(model, src, german, english, device)
+        prediction = prediction[:-1]  # remove <eos> token
+
+        targets.append([trg])
+        outputs.append(prediction)
+
+    return bleu_score(outputs, targets)
+
+
+def save_checkpoint(state, filename="my_checkpoint.pth.tar"):
+    print("=> Saving checkpoint")
+    torch.save(state, filename)
+
+
+def load_checkpoint(checkpoint, model, optimizer):
+    print("=> Loading checkpoint")
+    model.load_state_dict(checkpoint["state_dict"])
+    optimizer.load_state_dict(checkpoint["optimizer"])
+    
 
 eng_tokenizer = CharBPETokenizer()
 
@@ -23,8 +87,6 @@ lt_tokenizer = CharBPETokenizer()
 
 # Then train it!
 lt_tokenizer.train([ "lithuanian.txt" ])
-
-# sys.exit(0)
 
 english_txt = open('english.txt', encoding='utf-8').read().split('\n')
 lithuanian_txt = open('lithuanian.txt', encoding='utf-8').read().split('\n')
@@ -221,8 +283,8 @@ criterion = nn.CrossEntropyLoss(ignore_index=pad_idx)
 
 
 
-
-sentence = "Mano vardas."
+# You look just adorable tonight.
+sentence = "Šįvakar tu atrodai tiesiog žavingai."
 validLoss = [np.inf]
 
 early_stop = 0
@@ -231,11 +293,11 @@ for epoch in range(num_epochs):
         
 
     model.eval()
-    # translated_sentence = translate_sentence(
-    #     model, sentence, lithuanian, english, device, max_length=50
-    # )
+    translated_sentence = translate_sentence(
+        model, sentence, lithuanian, english, device, max_length=50
+    )
 
-    # print(f"Translated example sentence: \n {translated_sentence}")
+    print(f"Translated example sentence: \n {translated_sentence}")
     model.train()
     losses = []
 
@@ -326,5 +388,5 @@ for epoch in range(num_epochs):
 
 # running on entire test data takes a while
 load_checkpoint(torch.load("ro_eng.pth.tar"), model, optimizer)
-score = bleu(test_data, model, lithuanian, english, device)
+score = bleu(train_data, model, lithuanian, english, device)
 print(f"Bleu score {score * 100:.2f}")
