@@ -16,7 +16,7 @@ def translate_sentence(model, sentence, german, english, device, max_length=50):
     # Create tokens using spacy and everything in lower case (which is what our vocab is)
     
     if type(sentence) == str:
-        tokens = [tok for tok in tokenizer.encode(sentence).tokens]
+        tokens = [tok for tok in lt_tokenizer.encode(sentence).tokens]
     else:
         tokens = [tok for tok in sentence]
 
@@ -76,7 +76,13 @@ def load_checkpoint(checkpoint, model, optimizer):
     
 
 tokenizer = CharBPETokenizer()
-tokenizer.train([ "english_fr.txt", "english_lt.txt", "french.txt", "lithuanian.txt" ])
+tokenizer.train(["english_lt.txt", "lithuanian.txt" ])
+# tokenizer.train([ "english_fr.txt", "english_lt.txt", "french.txt", "lithuanian.txt" ])
+
+eng_tokenizer = CharBPETokenizer()
+eng_tokenizer.train([ "english_lt.txt" ])
+lt_tokenizer = CharBPETokenizer()
+lt_tokenizer.train([ "lithuanian.txt" ])
 
 english_txt = open('english_lt.txt', encoding='utf-8').read().split('\n')
 lithuanian_txt = open('lithuanian.txt', encoding='utf-8').read().split('\n')
@@ -104,11 +110,11 @@ valid.to_json('valid.json', orient='records', lines=True)
 #Tokenizers
 def tokenize_eng(text):
 #   return [tok.text for tok in spacy_eng.tokenizer(text)]
-    return [tok for tok in tokenizer.encode(text).tokens]
+    return [tok for tok in eng_tokenizer.encode(text).tokens]
 
 def tokenize_lit(text):
 #   return [tok.text for tok in spacy_lit.tokenizer(text)]
-    return [tok for tok in tokenizer.encode(text).tokens]
+    return [tok for tok in lt_tokenizer.encode(text).tokens]
 
 #Create Fields
 english = Field(sequential=True, use_vocab=True, tokenize=tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>")
