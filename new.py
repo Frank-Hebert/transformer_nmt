@@ -11,7 +11,7 @@ import numpy as np
 import sys
 from tokenizers import Tokenizer
 from tokenizers import CharBPETokenizer
-#from pytorchtools import EarlyStopping
+import matplotlib.pyplot as plt
 
 def translate_sentence(model, sentence, german, english, device, max_length=50):
     # Create tokens using spacy and everything in lower case (which is what our vocab is)
@@ -79,58 +79,78 @@ def load_checkpoint(checkpoint, model, optimizer):
 tokenizer = CharBPETokenizer()
 tokenizer.train([ "english_fr.txt", "english_lt.txt", "french.txt", "lithuanian.txt" ])
 
-english_txt = open('english_lt.txt', encoding='utf-8').read().split('\n')
-lithuanian_txt = open('lithuanian.txt', encoding='utf-8').read().split('\n')
+english_lt = open('english_lt.txt', encoding='utf-8').read().split('\n')
+lithuanian = open('lithuanian.txt', encoding='utf-8').read().split('\n')
+english_fr = open('english_fr.txt', encoding='utf-8').read().split('\n')
+french = open('french.txt', encoding='utf-8').read().split('\n')
 
 #Create dataframe
-raw_data = {'English': [line for line in english_txt],
-            'Lithuanian': [line for line in lithuanian_txt]}
+raw_data_child = {'English': [line for line in english_lt],
+            'Lithuanian': [line for line in lithuanian]}
+raw_data_parent = {'English': [line for line in english_fr],
+            'French': [line for line in french]}
 
-df = pd.DataFrame(raw_data, columns=['English', 'Lithuanian'])
 
-df = df.drop_duplicates("English")
-print(len(df.index))
+df_child = pd.DataFrame(raw_data_child, columns=['English', 'Lithuanian'])
+df_parent = pd.DataFrame(raw_data_parent, columns=['English', 'French'])
+
+
 #Split the data
 test_size = 0.05
 valid_size = 0.15 / (1-test_size) 
 
-train_temp, test = train_test_split(df, test_size=test_size)
-train, valid = train_test_split(train_temp, test_size=valid_size)
+train_temp, test_parent = train_test_split(df_parent, test_size=test_size)
+train_parent, valid_parent = train_test_split(train_temp, test_size=valid_size)
 
 #Save to .json files
-train.to_json('train.json', orient='records', lines=True)
-test.to_json('test.json', orient='records', lines=True)
-valid.to_json('valid.json', orient='records', lines=True)
+train_parent.to_json('train_parent.json', orient='records', lines=True)
+test_parent.to_json('test_parent.json', orient='records', lines=True)
+valid_parent.to_json('valid_parent.json', orient='records', lines=True)
+
+train_temp, test_child = train_test_split(df_child, test_size=test_size)
+train_child, valid_child = train_test_split(train_temp, test_size=valid_size)
+
+
+#Save to .json files
+train_child.to_json('train_child.json', orient='records', lines=True)
+test_child.to_json('test_child.json', orient='records', lines=True)
+valid_child.to_json('valid_child.json', orient='records', lines=True)
 
 #Tokenizers
-def tokenize_eng(text):
-#   return [tok.text for tok in spacy_eng.tokenizer(text)]
-    return [tok for tok in tokenizer.encode(text).tokens]
-
-def tokenize_lit(text):
-#   return [tok.text for tok in spacy_lit.tokenizer(text)]
+def tokenize_global(text):
     return [tok for tok in tokenizer.encode(text).tokens]
 
 #Create Fields
-english = Field(sequential=True, use_vocab=True, tokenize=tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>")
-lithuanian = Field(sequential=True, use_vocab=True, tokenize=tokenize_lit, lower=True, init_token="<sos>", eos_token="<eos>")
+# english = Field(sequential=True, use_vocab=True, tokenize=tokenize_global, lower=True, init_token="<sos>", eos_token="<eos>")
+# lithuanian = Field(sequential=True, use_vocab=True, tokenize=tokenize_global, lower=True, init_token="<sos>", eos_token="<eos>")
+# french = Field(sequential=True, use_vocab=True, tokenize=tokenize_global, lower=True, init_token="<sos>", eos_token="<eos>")
+common = Field(sequential=True, use_vocab=True, tokenize=tokenize_global, lower=True, init_token="<sos>", eos_token="<eos>")
 
-
-fields = {'Lithuanian' : ('src', lithuanian), 'English': ('trg', english)}
+fields_child = {'Lithuanian' : ('src', common), 'English': ('trg', common)}
+fields_parent = {'French' : ('src', common), 'English': ('trg', common)}
 
 #Tabular Dataset
-train_data, valid_data, test_data = TabularDataset.splits(
+train_data_parent, valid_data_parent, test_data_parent = TabularDataset.splits(
     path='',
-    train='train.json',
-    validation='valid.json',
-    test='test.json',
+    train='train_parent.json',
+    validation='valid_parent.json',
+    test='test_parent.json',
     format='json',
-    fields=fields)
+    fields=fields_parent)
 
+train_data_child, valid_data_child, test_data_child = TabularDataset.splits(
+    path='',
+    train='train_child.json',
+    validation='valid_child.json',
+    test='test_child.json',
+    format='json',
+    fields=fields_child)
 
 #Create Vocab
-english.build_vocab(train_data, max_size=10000, min_freq=2)
-lithuanian.build_vocab(train_data, max_size=10000, min_freq=2)
+# english.build_vocab(train_data, max_size=10000, min_freq=2)
+# lithuanian.build_vocab(train_data, max_size=10000, min_freq=2)
+common.build_vocab(train_data_child, train_data_parent, max_size=10000, min_freq=2)
+
 
 class Transformer(nn.Module):
     def __init__(
@@ -223,8 +243,8 @@ learning_rate = 3e-4
 batch_size = 32
 
 # Model hyperparameters
-src_vocab_size = len(lithuanian.vocab)
-trg_vocab_size = len(english.vocab)
+src_vocab_size = len(common.vocab)
+trg_vocab_size = len(common.vocab)
 embedding_size = 256
 num_heads = 8
 num_encoder_layers = 3
@@ -232,7 +252,7 @@ num_decoder_layers = 3
 dropout = 0.10
 max_len = 100
 forward_expansion = 4
-src_pad_idx = english.vocab.stoi["<pad>"]
+src_pad_idx = common.vocab.stoi["<pad>"]
 
 # Tensorboard to get nice loss plot
 writer = SummaryWriter("runs/loss_plot")
@@ -240,7 +260,7 @@ step = 0
 step_valid = 0
 
 train_iterator, valid_iterator, test_iterator = BucketIterator.splits(
-    (train_data, valid_data, test_data),
+    (train_data_parent, valid_data_parent, test_data_parent),
     batch_size=batch_size,
     sort_within_batch=True,
     sort_key=lambda x: len(x.src),
@@ -267,15 +287,12 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
     optimizer, factor=0.1, patience=10, verbose=True
 )
 
-pad_idx = english.vocab.stoi["<pad>"]
+pad_idx = common.vocab.stoi["<pad>"]
 criterion = nn.CrossEntropyLoss(ignore_index=pad_idx)
-
-#early_stopping = EarlyStopping(patience=patience, verbose=True)
-
 
 
 # You look just adorable tonight.
-sentence = "Šįvakar tu atrodai tiesiog žavingai."
+sentence = "Il fait super beau aujourd'hui et c'était la fête de Frank hier."
 validLoss = [np.inf]
 
 early_stop = 0
@@ -285,7 +302,7 @@ for epoch in range(num_epochs):
 
     model.eval()
     translated_sentence = translate_sentence(
-        model, sentence, lithuanian, english, device, max_length=50
+        model, sentence, common, common, device, max_length=50
     )
 
     print(f"Translated example sentence: \n {translated_sentence}")
@@ -360,24 +377,27 @@ for epoch in range(num_epochs):
     print('train loss = ',mean_train_loss)
     print('valid loss = ',mean_valid_loss)
     print(validLoss[-1])
+    checkpoint = {
+        "state_dict": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+    }
+    save_checkpoint(checkpoint, f'./model/fr_en_lt_epoch_{epoch}.pth.tar')
     if validLoss[-1]<mean_valid_loss:
       
       early_stop+=1
     else:
-      checkpoint = {
-            "state_dict": model.state_dict(),
-            "optimizer": optimizer.state_dict(),
-        }
-      save_checkpoint(checkpoint,'ro_eng.pth.tar')
+      save_checkpoint(checkpoint, f'./model/fr_en_lt_best.pth.tar')
       early_stop = 0
     if early_stop ==4:
       print('overfitting')
+      print(valid_losses)
+      plt.plot(valid_losses)
+      plt.show()
       break
     validLoss.append(mean_valid_loss)
 
 
-
 # running on entire test data takes a while
-load_checkpoint(torch.load("ro_eng.pth.tar"), model, optimizer)
-score = bleu(train_data, model, lithuanian, english, device)
+load_checkpoint(torch.load("parent.pth.tar"), model, optimizer)
+score = bleu(test_data_parent, model, common, common, device)
 print(f"Bleu score {score * 100:.2f}")
