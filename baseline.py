@@ -93,8 +93,6 @@ raw_data = {'English': [line for line in english_txt],
 
 df = pd.DataFrame(raw_data, columns=['English', 'Lithuanian'])
 
-df = df.drop_duplicates("English")
-print(len(df.index))
 #Split the data
 test_size = 0.05
 valid_size = 0.15 / (1-test_size) 
@@ -369,7 +367,7 @@ for epoch in range(num_epochs):
       
       early_stop+=1
     else:
-      checkpoint = {
+        checkpoint = {
             "state_dict": model.state_dict(),
             "optimizer": optimizer.state_dict(),
         }
