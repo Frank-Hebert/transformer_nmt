@@ -13,9 +13,10 @@ from tokenizers import Tokenizer
 from tokenizers import CharBPETokenizer
 import matplotlib.pyplot as plt
 
+
 def translate_sentence(model, sentence, german, english, device, max_length=50):
     # Create tokens using spacy and everything in lower case (which is what our vocab is)
-    
+
     if type(sentence) == str:
         tokens = [tok for tok in tokenizer.encode(sentence).tokens]
     else:
@@ -48,6 +49,7 @@ def translate_sentence(model, sentence, german, english, device, max_length=50):
     # remove start token
     return translated_sentence[1:]
 
+
 def bleu(data, model, german, english, device):
     targets = []
     outputs = []
@@ -74,79 +76,94 @@ def load_checkpoint(checkpoint, model, optimizer):
     print("=> Loading checkpoint")
     model.load_state_dict(checkpoint["state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer"])
-    
+
 
 tokenizer = CharBPETokenizer()
-tokenizer.train([ "english_fr.txt", "english_lt.txt", "french.txt", "lithuanian.txt" ])
+tokenizer.train(["english_fr.txt", "english_lt.txt", "french.txt", "lithuanian.txt"])
 
-english_lt = open('english_lt.txt', encoding='utf-8').read().split('\n')
-lithuanian = open('lithuanian.txt', encoding='utf-8').read().split('\n')
-english_fr = open('english_fr.txt', encoding='utf-8').read().split('\n')
-french = open('french.txt', encoding='utf-8').read().split('\n')
+english_lt = open("english_lt.txt", encoding="utf-8").read().split("\n")
+lithuanian = open("lithuanian.txt", encoding="utf-8").read().split("\n")
+english_fr = open("english_fr.txt", encoding="utf-8").read().split("\n")
+french = open("french.txt", encoding="utf-8").read().split("\n")
 
-#Create dataframe
-raw_data_child = {'English': [line for line in english_lt],
-            'Lithuanian': [line for line in lithuanian]}
-raw_data_parent = {'English': [line for line in english_fr],
-            'French': [line for line in french]}
+# Create dataframe
+raw_data_child = {
+    "English": [line for line in english_lt],
+    "Lithuanian": [line for line in lithuanian],
+}
+raw_data_parent = {
+    "English": [line for line in english_fr],
+    "French": [line for line in french],
+}
 
 
-df_child = pd.DataFrame(raw_data_child, columns=['English', 'Lithuanian'])
-df_parent = pd.DataFrame(raw_data_parent, columns=['English', 'French'])
+df_child = pd.DataFrame(raw_data_child, columns=["English", "Lithuanian"])
+df_parent = pd.DataFrame(raw_data_parent, columns=["English", "French"])
 
 
-#Split the data
+# Split the data
 test_size = 0.05
-valid_size = 0.15 / (1-test_size) 
+valid_size = 0.15 / (1 - test_size)
 
 train_temp, test_parent = train_test_split(df_parent, test_size=test_size)
 train_parent, valid_parent = train_test_split(train_temp, test_size=valid_size)
 
-#Save to .json files
-train_parent.to_json('train_parent.json', orient='records', lines=True)
-test_parent.to_json('test_parent.json', orient='records', lines=True)
-valid_parent.to_json('valid_parent.json', orient='records', lines=True)
+
+# Save to .json files
+train_parent.to_json("train_parent.json", orient="records", lines=True)
+test_parent.to_json("test_parent.json", orient="records", lines=True)
+valid_parent.to_json("valid_parent.json", orient="records", lines=True)
 
 train_temp, test_child = train_test_split(df_child, test_size=test_size)
 train_child, valid_child = train_test_split(train_temp, test_size=valid_size)
 
 
-#Save to .json files
-train_child.to_json('train_child.json', orient='records', lines=True)
-test_child.to_json('test_child.json', orient='records', lines=True)
-valid_child.to_json('valid_child.json', orient='records', lines=True)
+# Save to .json files
+train_child.to_json("train_child.json", orient="records", lines=True)
+test_child.to_json("test_child.json", orient="records", lines=True)
+valid_child.to_json("valid_child.json", orient="records", lines=True)
 
-#Tokenizers
+# Tokenizers
 def tokenize_global(text):
     return [tok for tok in tokenizer.encode(text).tokens]
 
-#Create Fields
+
+# Create Fields
 # english = Field(sequential=True, use_vocab=True, tokenize=tokenize_global, lower=True, init_token="<sos>", eos_token="<eos>")
 # lithuanian = Field(sequential=True, use_vocab=True, tokenize=tokenize_global, lower=True, init_token="<sos>", eos_token="<eos>")
 # french = Field(sequential=True, use_vocab=True, tokenize=tokenize_global, lower=True, init_token="<sos>", eos_token="<eos>")
-common = Field(sequential=True, use_vocab=True, tokenize=tokenize_global, lower=True, init_token="<sos>", eos_token="<eos>")
+common = Field(
+    sequential=True,
+    use_vocab=True,
+    tokenize=tokenize_global,
+    lower=True,
+    init_token="<sos>",
+    eos_token="<eos>",
+)
 
-fields_child = {'Lithuanian' : ('src', common), 'English': ('trg', common)}
-fields_parent = {'French' : ('src', common), 'English': ('trg', common)}
+fields_child = {"Lithuanian": ("src", common), "English": ("trg", common)}
+fields_parent = {"French": ("src", common), "English": ("trg", common)}
 
-#Tabular Dataset
+# Tabular Dataset
 train_data_parent, valid_data_parent, test_data_parent = TabularDataset.splits(
-    path='',
-    train='train_parent.json',
-    validation='valid_parent.json',
-    test='test_parent.json',
-    format='json',
-    fields=fields_parent)
+    path="",
+    train="train_parent.json",
+    validation="valid_parent.json",
+    test="test_parent.json",
+    format="json",
+    fields=fields_parent,
+)
 
 train_data_child, valid_data_child, test_data_child = TabularDataset.splits(
-    path='',
-    train='train_child.json',
-    validation='valid_child.json',
-    test='test_child.json',
-    format='json',
-    fields=fields_child)
+    path="",
+    train="train_child.json",
+    validation="valid_child.json",
+    test="test_child.json",
+    format="json",
+    fields=fields_child,
+)
 
-#Create Vocab
+# Create Vocab
 # english.build_vocab(train_data, max_size=10000, min_freq=2)
 # lithuanian.build_vocab(train_data, max_size=10000, min_freq=2)
 common.build_vocab(train_data_child, train_data_parent, max_size=10000, min_freq=2)
@@ -231,6 +248,7 @@ class Transformer(nn.Module):
         out = self.fc_out(out)
         return out
 
+
 # We're ready to define everything we need for training our Seq2Seq model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -298,7 +316,6 @@ validLoss = [np.inf]
 early_stop = 0
 for epoch in range(num_epochs):
     print(f"[Epoch {epoch} / {num_epochs}]")
-        
 
     model.eval()
     translated_sentence = translate_sentence(
@@ -363,7 +380,6 @@ for epoch in range(num_epochs):
         output = output.reshape(-1, output.shape[2])
         target = target[1:].reshape(-1)
 
-
         loss = criterion(output, target)
         valid_losses.append(loss.item())
 
@@ -374,30 +390,30 @@ for epoch in range(num_epochs):
     mean_train_loss = sum(losses) / len(losses)
 
     scheduler.step(mean_valid_loss)
-    print('train loss = ',mean_train_loss)
-    print('valid loss = ',mean_valid_loss)
+    print("train loss = ", mean_train_loss)
+    print("valid loss = ", mean_valid_loss)
     print(validLoss[-1])
     checkpoint = {
         "state_dict": model.state_dict(),
         "optimizer": optimizer.state_dict(),
     }
-    save_checkpoint(checkpoint, f'./model/fr_en_lt_epoch_{epoch}.pth.tar')
-    if validLoss[-1]<mean_valid_loss:
-      
-      early_stop+=1
+    save_checkpoint(checkpoint, f"./model/fr_en_lt_epoch_{epoch}.pth.tar")
+    if min(validLoss) < mean_valid_loss:
+
+        early_stop += 1
     else:
-      save_checkpoint(checkpoint, f'./model/fr_en_lt_best.pth.tar')
-      early_stop = 0
-    if early_stop ==4:
-      print('overfitting')
-      print(valid_losses)
-      plt.plot(valid_losses)
-      plt.show()
-      break
+        save_checkpoint(checkpoint, f"./model/fr_en_lt_best.pth.tar")
+        early_stop = 0
+    if early_stop == 4:
+        print("overfitting")
+        print(valid_losses)
+        plt.plot(valid_losses)
+        plt.show()
+        break
     validLoss.append(mean_valid_loss)
 
-
+print(f"validloss : {validLoss}")
 # running on entire test data takes a while
-load_checkpoint(torch.load("parent.pth.tar"), model, optimizer)
+load_checkpoint(torch.load("./model/fr_en_lt_best.pth.tar"), model, optimizer)
 score = bleu(test_data_parent, model, common, common, device)
 print(f"Bleu score {score * 100:.2f}")

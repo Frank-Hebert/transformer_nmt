@@ -12,9 +12,10 @@ import sys
 from tokenizers import Tokenizer
 from tokenizers import CharBPETokenizer
 
+
 def translate_sentence(model, sentence, german, english, device, max_length=50):
     # Create tokens using spacy and everything in lower case (which is what our vocab is)
-    
+
     if type(sentence) == str:
         tokens = [tok for tok in lt_tokenizer.encode(sentence).tokens]
     else:
@@ -47,6 +48,7 @@ def translate_sentence(model, sentence, german, english, device, max_length=50):
     # remove start token
     return translated_sentence[1:]
 
+
 def bleu(data, model, german, english, device):
     targets = []
     outputs = []
@@ -73,67 +75,95 @@ def load_checkpoint(checkpoint, model, optimizer):
     print("=> Loading checkpoint")
     model.load_state_dict(checkpoint["state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer"])
-    
+
 
 tokenizer = CharBPETokenizer()
-tokenizer.train(["english_lt.txt", "lithuanian.txt" ])
+tokenizer.train(["english_lt.txt", "lithuanian.txt"])
 # tokenizer.train([ "english_fr.txt", "english_lt.txt", "french.txt", "lithuanian.txt" ])
 
 eng_tokenizer = CharBPETokenizer()
-eng_tokenizer.train([ "english_lt.txt" ])
+eng_tokenizer.train(["english_lt.txt"])
 lt_tokenizer = CharBPETokenizer()
-lt_tokenizer.train([ "lithuanian.txt" ])
+lt_tokenizer.train(["lithuanian.txt"])
 
-english_txt = open('english_lt.txt', encoding='utf-8').read().split('\n')
-lithuanian_txt = open('lithuanian.txt', encoding='utf-8').read().split('\n')
+english_txt = open("english_lt.txt", encoding="utf-8").read().split("\n")
+lithuanian_txt = open("lithuanian.txt", encoding="utf-8").read().split("\n")
 
-#Create dataframe
-raw_data = {'English': [line for line in english_txt],
-            'Lithuanian': [line for line in lithuanian_txt]}
+# Create dataframe
+raw_data = {
+    "English": [line for line in english_txt],
+    "Lithuanian": [line for line in lithuanian_txt],
+}
 
-df = pd.DataFrame(raw_data, columns=['English', 'Lithuanian'])
+df = pd.DataFrame(raw_data, columns=["English", "Lithuanian"])
 
-#Split the data
+# Split the data
 test_size = 0.05
-valid_size = 0.15 / (1-test_size) 
+valid_size = 0.15 / (1 - test_size)
 
-train_temp, test = train_test_split(df, test_size=test_size)
-train, valid = train_test_split(train_temp, test_size=valid_size)
+train_temp, test = train_test_split(df, test_size=test_size, random_state=42)
+train, valid = train_test_split(train_temp, test_size=valid_size, random_state=42)
 
-#Save to .json files
-train.to_json('train.json', orient='records', lines=True)
-test.to_json('test.json', orient='records', lines=True)
-valid.to_json('valid.json', orient='records', lines=True)
+# with open('train_txt/train.txt', 'a') as f:
+#     f.write(
+#         train.to_string(header = False, index = False)
+#     )
 
-#Tokenizers
+
+# sys.exit()
+
+# Save to .json files
+train.to_json("train.json", orient="records", lines=True)
+test.to_json("test.json", orient="records", lines=True)
+valid.to_json("valid.json", orient="records", lines=True)
+
+# Tokenizers
 def tokenize_eng(text):
-#   return [tok.text for tok in spacy_eng.tokenizer(text)]
+    #   return [tok.text for tok in spacy_eng.tokenizer(text)]
     return [tok for tok in eng_tokenizer.encode(text).tokens]
 
+
 def tokenize_lit(text):
-#   return [tok.text for tok in spacy_lit.tokenizer(text)]
+    #   return [tok.text for tok in spacy_lit.tokenizer(text)]
     return [tok for tok in lt_tokenizer.encode(text).tokens]
 
-#Create Fields
-english = Field(sequential=True, use_vocab=True, tokenize=tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>")
-lithuanian = Field(sequential=True, use_vocab=True, tokenize=tokenize_lit, lower=True, init_token="<sos>", eos_token="<eos>")
+
+# Create Fields
+english = Field(
+    sequential=True,
+    use_vocab=True,
+    tokenize=tokenize_eng,
+    lower=True,
+    init_token="<sos>",
+    eos_token="<eos>",
+)
+lithuanian = Field(
+    sequential=True,
+    use_vocab=True,
+    tokenize=tokenize_lit,
+    lower=True,
+    init_token="<sos>",
+    eos_token="<eos>",
+)
 
 
-fields = {'Lithuanian' : ('src', lithuanian), 'English': ('trg', english)}
+fields = {"Lithuanian": ("src", lithuanian), "English": ("trg", english)}
 
-#Tabular Dataset
+# Tabular Dataset
 train_data, valid_data, test_data = TabularDataset.splits(
-    path='',
-    train='train.json',
-    validation='valid.json',
-    test='test.json',
-    format='json',
-    fields=fields)
+    path="",
+    train="train.json",
+    validation="valid.json",
+    test="test.json",
+    format="json",
+    fields=fields,
+)
 
 
-#Create Vocab
+# Create Vocab
 english.build_vocab(train_data, max_size=10000, min_freq=2)
 lithuanian.build_vocab(train_data, max_size=10000, min_freq=2)
+
 
 class Transformer(nn.Module):
     def __init__(
@@ -214,6 +244,7 @@ class Transformer(nn.Module):
         out = self.fc_out(out)
         return out
 
+
 # We're ready to define everything we need for training our Seq2Seq model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -273,8 +304,7 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 pad_idx = english.vocab.stoi["<pad>"]
 criterion = nn.CrossEntropyLoss(ignore_index=pad_idx)
 
-#early_stopping = EarlyStopping(patience=patience, verbose=True)
-
+# early_stopping = EarlyStopping(patience=patience, verbose=True)
 
 
 # You look just adorable tonight.
@@ -284,7 +314,6 @@ validLoss = [np.inf]
 early_stop = 0
 for epoch in range(num_epochs):
     print(f"[Epoch {epoch} / {num_epochs}]")
-        
 
     model.eval()
     translated_sentence = translate_sentence(
@@ -349,7 +378,6 @@ for epoch in range(num_epochs):
         output = output.reshape(-1, output.shape[2])
         target = target[1:].reshape(-1)
 
-
         loss = criterion(output, target)
         valid_losses.append(loss.item())
 
@@ -360,24 +388,24 @@ for epoch in range(num_epochs):
     mean_train_loss = sum(losses) / len(losses)
 
     scheduler.step(mean_valid_loss)
-    print('train loss = ',mean_train_loss)
-    print('valid loss = ',mean_valid_loss)
+    print("train loss = ", mean_train_loss)
+    print("valid loss = ", mean_valid_loss)
     print(validLoss[-1])
-    if validLoss[-1]<mean_valid_loss:
-      
-      early_stop+=1
+    # if validLoss[-1]<mean_valid_loss:
+    if min(validLoss) < mean_valid_loss:
+
+        early_stop += 1
     else:
         checkpoint = {
             "state_dict": model.state_dict(),
             "optimizer": optimizer.state_dict(),
         }
-      save_checkpoint(checkpoint,'ro_eng.pth.tar')
-      early_stop = 0
-    if early_stop ==4:
-      print('overfitting')
-      break
+        save_checkpoint(checkpoint, "ro_eng.pth.tar")
+        early_stop = 0
+    if early_stop == 4:
+        print("overfitting")
+        break
     validLoss.append(mean_valid_loss)
-
 
 
 # running on entire test data takes a while
