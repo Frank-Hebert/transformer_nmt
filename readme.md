@@ -6,3 +6,6 @@ https://www.youtube.com/watch?v=U0s0f995w14&feature=youtu.be&ab_channel=AladdinP
 
 How to train NMT with Pytorch transformer
 https://www.youtube.com/watch?v=M6adRGJe5cQ&ab_channel=AladdinPersson
+
+Data from:
+http://www.manythings.org/anki/
