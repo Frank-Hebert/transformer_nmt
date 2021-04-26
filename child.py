@@ -309,7 +309,9 @@ model = Transformer(
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
 if load_model:
-    checkpoint = torch.load("./model/fr_en_lt_best.pth.tar")
+    checkpoint = torch.load(
+        "./model/fr_en_lt_best.pth.tar"
+    )  # Choose the pretrained model (parent) at the epoch you want
     model.load_state_dict(checkpoint["state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer"])
 
