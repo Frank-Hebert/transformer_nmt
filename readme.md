@@ -18,9 +18,11 @@ The main objective of this project was to reproduce the transfer learning method
 
 **child.py** : Script to load the parent model and fine-tune on the child language pair. 
 
+**enlish_fr.txt, english_lt.txt, french.txt, lithaninan.txt** : Examples of preprocessed data to be able to run the code. Use **preprocess.ipynb** if you want to experiment with different datasets.
+
 ## Usage
 
-Simply clone this repo and run **transfer_learning_nmt.ipynb** on google colab. Don't forget to pick a GPU in the notebook setting.
+Simply clone this repo and run **transfer_learning_nmt.ipynb** on google colab. Don't forget to pick a GPU in the notebook setting. The current example uses a French-English as the Parent pair and Lithuanian-English as the Child pair.
 
 
 
