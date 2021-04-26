@@ -28,11 +28,15 @@ Simply clone this repo and run **transfer_learning_nmt.ipynb** on google colab. 
 
 ## Data and References
 
-Data from:
+**Data from:**
+
 http://www.manythings.org/anki/
 
 
-References:
+**References:**
+
+Trivial Transfer Learning for Low-Resource Neural Machine Translation
+https://www.aclweb.org/anthology/W18-6325.pdf
 
 How to make transformer from scratch
 https://www.youtube.com/watch?v=U0s0f995w14&feature=youtu.be&ab_channel=AladdinPersson
