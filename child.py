@@ -13,7 +13,7 @@ from tokenizers import Tokenizer
 from tokenizers import CharBPETokenizer
 import matplotlib.pyplot as plt
 
-
+# function to translate a sentence from source to target using the latest trained model
 def translate_sentence(model, sentence, german, english, device, max_length=50):
     # Create tokens using spacy and everything in lower case (which is what our vocab is)
 
@@ -49,7 +49,7 @@ def translate_sentence(model, sentence, german, english, device, max_length=50):
     # remove start token
     return translated_sentence[1:]
 
-
+# Function to compute the blue score of the child pair using the test set and latest model
 def bleu(data, model, german, english, device):
     targets = []
     outputs = []
@@ -66,21 +66,22 @@ def bleu(data, model, german, english, device):
 
     return bleu_score(outputs, targets)
 
-
+# function to save model parameters
 def save_checkpoint(state, filename="my_checkpoint.pth.tar"):
     print("=> Saving checkpoint")
     torch.save(state, filename)
 
-
+# function to load pre-saved model parameters
 def load_checkpoint(checkpoint, model, optimizer):
     print("=> Loading checkpoint")
     model.load_state_dict(checkpoint["state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer"])
 
-
+# A common Tokenizer training
 tokenizer = CharBPETokenizer()
 tokenizer.train(["english_fr.txt", "english_lt.txt", "french.txt", "lithuanian.txt"])
 
+# Data loading
 english_lt = open("english_lt.txt", encoding="utf-8").read().split("\n")
 lithuanian = open("lithuanian.txt", encoding="utf-8").read().split("\n")
 english_fr = open("english_fr.txt", encoding="utf-8").read().split("\n")
@@ -134,11 +135,7 @@ valid_child.to_json("valid_child.json", orient="records", lines=True)
 def tokenize_global(text):
     return [tok for tok in tokenizer.encode(text).tokens]
 
-
 # Create Fields
-# english = Field(sequential=True, use_vocab=True, tokenize=tokenize_global, lower=True, init_token="<sos>", eos_token="<eos>")
-# lithuanian = Field(sequential=True, use_vocab=True, tokenize=tokenize_global, lower=True, init_token="<sos>", eos_token="<eos>")
-# french = Field(sequential=True, use_vocab=True, tokenize=tokenize_global, lower=True, init_token="<sos>", eos_token="<eos>")
 common = Field(
     sequential=True,
     use_vocab=True,
@@ -161,6 +158,7 @@ train_data_parent, valid_data_parent, test_data_parent = TabularDataset.splits(
     fields=fields_parent,
 )
 
+# Convert into Tabular Dataset
 train_data_child, valid_data_child, test_data_child = TabularDataset.splits(
     path="",
     train="train_child.json",
@@ -170,12 +168,10 @@ train_data_child, valid_data_child, test_data_child = TabularDataset.splits(
     fields=fields_child,
 )
 
-# Create Vocab
-# english.build_vocab(train_data, max_size=10000, min_freq=2)
-# lithuanian.build_vocab(train_data, max_size=10000, min_freq=2)
+# Create a common Vocab
 common.build_vocab(train_data_child, train_data_parent, max_size=10000, min_freq=2)
 
-
+# Prebuild transformer class from pytorch
 class Transformer(nn.Module):
     def __init__(
         self,
@@ -284,6 +280,7 @@ writer = SummaryWriter("runs/loss_plot")
 step = 0
 step_valid = 0
 
+# build into torchtext iterators
 train_iterator, valid_iterator, test_iterator = BucketIterator.splits(
     (train_data_child, valid_data_child, test_data_child),
     batch_size=batch_size,
@@ -292,6 +289,7 @@ train_iterator, valid_iterator, test_iterator = BucketIterator.splits(
     device=device,
 )
 
+# Initiate transformer model
 model = Transformer(
     embedding_size,
     src_vocab_size,
@@ -323,11 +321,12 @@ pad_idx = common.vocab.stoi["<pad>"]
 criterion = nn.CrossEntropyLoss(ignore_index=pad_idx)
 
 
-# You look just adorable tonight.
+# Sentence in Luthanian to translate, the true meaning is: You look just adorable tonight.
 sentence = "Šįvakar tu atrodai tiesiog žavingai."
 validLoss = [np.inf]
 
 early_stop = 0
+# iterate through each epoch
 for epoch in range(num_epochs):
     print(f"[Epoch {epoch} / {num_epochs}]")
 
@@ -400,6 +399,7 @@ for epoch in range(num_epochs):
         writer.add_scalar("valid loss", loss, global_step=step_valid)
         step_valid += 1
 
+# compute losses
     mean_valid_loss = sum(valid_losses) / len(valid_losses)
     mean_train_loss = sum(losses) / len(losses)
 
@@ -412,12 +412,14 @@ for epoch in range(num_epochs):
         "optimizer": optimizer.state_dict(),
     }
     # save_checkpoint(checkpoint, f'./child_model/child_{epoch}.pth.tar')
+    # If valid loss is smaller than the mean loss
     if min(validLoss) < mean_valid_loss:
 
         early_stop += 1
     else:
         save_checkpoint(checkpoint, f"./child_model/best_child.pth.tar")
         early_stop = 0
+    # Check if converges for 4 consecutives epochs
     if early_stop == 4:
         print("overfitting")
         break
@@ -427,5 +429,6 @@ for epoch in range(num_epochs):
 # running on entire test data takes a while
 
 load_checkpoint(torch.load("./child_model/best_child.pth.tar"), model, optimizer)
+# Compute BLEU score
 score = bleu(test_data_child, model, common, common, device)
 print(f"Bleu score {score * 100:.2f}")
